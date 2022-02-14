@@ -1,5 +1,4 @@
 import websocket
-import math
 import json
 from datetime import datetime
 import time
@@ -15,7 +14,9 @@ def sort_message(message):
 
 def on_message(ws, message):
     sort_message(message)
-    one_minute_period(message)
+
+    # if we want to see the VWAP price:
+    vwap(message)
 
 
 def on_error(ws, error):
@@ -30,12 +31,11 @@ def on_open(ws):
     ws.send('{"type":"subscribe","symbol":"BINANCE:BTCUSDT"}')
 
 
-def one_minute_period(message):
-    sum_volume = 0
+def vwap(message):
     for data in json.loads(message)['data']:
-        sum_volume = sum_volume + data['v']
-        average_volume = sum_volume / len(message)
-        print(average_volume)
+        p = data['p']
+        v = data['v']
+        print("VWAP is: " + str((p * v) / v))
 
 
 if __name__ == "__main__":
@@ -46,3 +46,5 @@ if __name__ == "__main__":
                                 on_close=on_close)
     ws.on_open = on_open
     ws.run_forever()
+
+
