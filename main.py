@@ -1,8 +1,6 @@
 import websocket
 import json
 from datetime import datetime
-import time
-import threading
 
 
 def sort_message(message):
@@ -13,10 +11,19 @@ def sort_message(message):
 
 
 def on_message(ws, message):
-    sort_message(message)
+    # option to print all relevant trades
+    # sort_message(message)
 
-    # if we want to see the VWAP price:
-    vwap(message)
+    # option for VWAP
+    for data in json.loads(message)['data']:
+        p = data['p']
+        v = data['v']
+        vwap(p, v)
+
+
+total_price = 0
+total_volume = 0
+message_counter = 0
 
 
 def on_error(ws, error):
@@ -31,11 +38,27 @@ def on_open(ws):
     ws.send('{"type":"subscribe","symbol":"BINANCE:BTCUSDT"}')
 
 
-def vwap(message):
-    for data in json.loads(message)['data']:
-        p = data['p']
-        v = data['v']
-        print("VWAP is: " + str((p * v) / v))
+def vwap(p, v):
+    global total_price
+    global total_volume
+    global message_counter
+
+    total_price += p
+    total_volume += v
+    message_counter += 1
+
+    if message_counter == 10:
+        vwap_final()
+        total_price = 0
+        total_volume = 0
+        message_counter = 0
+
+
+def vwap_final():
+    global total_price
+    global total_volume
+
+    print("VWAP is ", (total_price * total_volume) / total_volume)
 
 
 if __name__ == "__main__":
@@ -44,7 +67,12 @@ if __name__ == "__main__":
                                 on_message=on_message,
                                 on_error=on_error,
                                 on_close=on_close)
+
     ws.on_open = on_open
     ws.run_forever()
+
+
+
+
 
 
