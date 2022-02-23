@@ -1,10 +1,20 @@
 import websocket
 import json
+import time
 from datetime import datetime
+
+total_price = 0
+total_volume = 0
 
 
 def sort_message(message):
     for data in json.loads(message)['data']:
+        # running vwap in background
+        p = data['p']
+        v = data['v']
+        vwap(p, v)
+
+        # printing the trades
         print(datetime.utcfromtimestamp(data['t'] / 1000).strftime('%Y-%m-%d %H:%M:%S'),
               "price:", data['p'],
               "volume:", data['v'])
@@ -12,18 +22,17 @@ def sort_message(message):
 
 def on_message(ws, message):
     # option to print all relevant trades
-    # sort_message(message)
+    sort_message(message)
 
     # option for VWAP
     for data in json.loads(message)['data']:
-        p = data['p']
-        v = data['v']
-        vwap(p, v)
+        # getting the last two characters of current time
+        checker = datetime.utcfromtimestamp(data['t'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        checker1 = str(checker[-2:])
 
-
-total_price = 0
-total_volume = 0
-message_counter = 0
+        # if the last two characters are 00 it means a minute has passed, so we run vwap_final()
+        if int(checker1) == 00:
+            vwap_final()
 
 
 def on_error(ws, error):
@@ -41,17 +50,9 @@ def on_open(ws):
 def vwap(p, v):
     global total_price
     global total_volume
-    global message_counter
 
     total_price += p
     total_volume += v
-    message_counter += 1
-
-    if message_counter == 10:
-        vwap_final()
-        total_price = 0
-        total_volume = 0
-        message_counter = 0
 
 
 def vwap_final():
@@ -59,6 +60,8 @@ def vwap_final():
     global total_volume
 
     print("VWAP is ", (total_price * total_volume) / total_volume)
+    total_price = 0
+    total_volume = 0
 
 
 if __name__ == "__main__":
